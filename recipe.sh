@@ -11,6 +11,7 @@ set -x
 # new for hydrogen
 yum -y install git wget
 yum -y install cmake
+yum -y install fuse-devel
 yum -y install libtar-devel libarchive-devel zlib-devel libsndfile-devel
 yum -y install alsa-lib-devel jack-audio-connection-kit-devel ladspa-devel pulseaudio-libs-devel portaudio-devel
 yum -y install epel-release
@@ -30,20 +31,18 @@ mkdir build
 cd build
 git clone https://github.com/hydrogen-music/hydrogen
 cd hydrogen
+hydrogen_git_hash=$(git rev-parse HEAD)
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=/opt/hydrogen ..
+cmake -DCMAKE_INSTALL_PREFIX=/USR ..
 make
 make install
 # patch to use fusion style in any case
 #sed -i -e 's/\"GTK+\";/\"Fusion\";/g' -e 's/Cleanlooks/Fusion/g' -e 's/Oxygen/Fusion/g' -e 's/Plastique/Fusion/g' configmanager.cpp
 #sed -i -e 's/QApplication::setStyle(style)/QApplication::setStyle(\"Fusion\")/g' \
 #       -e 's/QApplication::setStyle(newStyle)/QApplication::setStyle(\"Fusion\")/g' configmanager.cpp
-#INSTALL_ROOT=/USR make install
 
-exit
-
-cd ../../..
+cd ../..
 
 ######################################################
 # Build AppImageKit
@@ -69,28 +68,21 @@ APP_IMAGE=$APP.AppImage
 TXS_SOURCE_DIR=build/hydrogen
 
 mkdir $APP_DIR
-mv /USR/usr $APP_DIR/
-mkdir $APP_DIR/usr/lib
+#mv /USR $APP_DIR/usr
+cp -R /USR $APP_DIR/usr
 mkdir $APP_DIR/usr/lib/qt5
 mkdir $APP_DIR/usr/bin/platforms
 
 cp build/AppImageKit/AppRun $APP_DIR/
 
-#cp $APP_DIR/usr/share/icons/hicolor/scalable/apps/texstudio.svg $APP_DIR/
-#cp $APP_DIR/usr/share/applications/texstudio.desktop $APP_DIR/
-#sed -i -e 's/Exec=texstudio %F/Exec=start_texstudio.sh %F/g' -e 's/Icon=texstudio/Icon=texstudio.svg/g' $APP_DIR/texstudio.desktop
-#sed -i -e 's/Icon=texstudio/Icon=texstudio.svg/g' $APP_DIR/texstudio.desktop
+cp $APP_DIR/usr/share/hydrogen/data/img/gray/h2-icon.svg $APP_DIR/
+cp build/hydrogen/linux/hydrogen.desktop $APP_DIR/
+sed -i -e 's/Icon=h2-icon/Icon=h2-icon.svg/g' $APP_DIR/hydrogen.desktop
 
 cp -R /usr/lib64/qt5/plugins $APP_DIR/usr/lib/qt5/
 cp $APP_DIR/usr/lib/qt5/plugins/platforms/libqxcb.so $APP_DIR/usr/bin/platforms/
 
-cp /usr/local/lib/libjpeg.so.8 $APP_DIR/usr/lib
-
-cp $(ldconfig -p | grep libEGL.so.1 | cut -d ">" -f 2 | xargs) $APP_DIR/usr/lib/ # Otherwise F23 cannot load the Qt platform plugin "xcb"
-
-cp /usr/local/lib/libpoppler-qt5.so.1 $APP_DIR/usr/lib
-#cp /usr/local/lib/libpoppler.so.58 $APP_DIR/usr/lib
-
+# cp $(ldconfig -p | grep libEGL.so.1 | cut -d ">" -f 2 | xargs) $APP_DIR/usr/lib/ # Otherwise F23 cannot load the Qt platform plugin "xcb"
 
 set +e
 ldd $APP_DIR/usr/lib/qt5/plugins/platforms/libqxcb.so | grep "=>" | awk '{print $3}' | xargs -I '{}' cp -v '{}' $APP_DIR/usr/lib
@@ -152,7 +144,6 @@ rm -f $APP_DIR/usr/lib/libz.so.1 || true
 
 # patch hardcoded '/usr/lib' in binaries away
 find $APP_DIR/usr/ -type f -exec sed -i -e 's|/usr/lib|././/lib|g' {} \;
-find $APP_DIR/usr/ -type f -exec sed -i -e 's|/usr/share/texstudio|././/share/texstudio|g' {} \;
 find $APP_DIR/usr/ -type f -exec sed -i -e 's|/USR|././|g' {} \;
 
 ######################################################
@@ -161,3 +152,4 @@ find $APP_DIR/usr/ -type f -exec sed -i -e 's|/USR|././|g' {} \;
 # Convert the AppDir into an AppImage
 build/AppImageKit/AppImageAssistant.AppDir/package ./$APP_DIR/ ./$APP_IMAGE
 
+mv Hydrogen.AppImage Hydrogen_$(date +%Y-%m-%d_%H-%M-%S)_$hydrogen_git_hash.AppImage
