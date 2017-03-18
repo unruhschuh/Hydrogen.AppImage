@@ -9,12 +9,12 @@ set -x
 # install packages
 ######################################################
 # new for hydrogen
+yum -y install epel-release
 yum -y install git wget
 yum -y install cmake
 yum -y install fuse-devel
 yum -y install libtar-devel libarchive-devel zlib-devel libsndfile-devel
-yum -y install alsa-lib-devel jack-audio-connection-kit-devel ladspa-devel pulseaudio-libs-devel portaudio-devel
-yum -y install epel-release
+yum -y install alsa-lib-devel jack-audio-connection-kit-devel ladspa-devel pulseaudio-libs-devel portaudio-devel portmidi-devel
 yum -y install qt5-qtbase-devel qt5-qtbase-gui qt5-qtxmlpatterns-devel
 
 # Need a newer gcc, getting it from Developer Toolset 2
@@ -31,10 +31,13 @@ mkdir build
 cd build
 git clone https://github.com/hydrogen-music/hydrogen
 cd hydrogen
-hydrogen_git_hash=$(git rev-parse HEAD)
+hydrogen_git_hash=$(git rev-parse --short=7 HEAD)
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=/USR ..
+cmake -DCMAKE_INSTALL_PREFIX=/USR \
+      -DWANT_PORTAUDIO=ON         \
+      -DWANT_PORTMIDI=ON          \
+      ..
 make
 make install
 # patch to use fusion style in any case
